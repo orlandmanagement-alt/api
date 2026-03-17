@@ -1,8 +1,10 @@
-import * as impl from "./_helper/project_apply.js";
-
-export const onRequestGet = impl.onRequestGet;
-export const onRequestPost = impl.onRequestPost;
-export const onRequestPut = impl.onRequestPut;
-export const onRequestPatch = impl.onRequestPatch;
-export const onRequestDelete = impl.onRequestDelete;
-export const onRequestOptions = impl.onRequestOptions;
+export async function onRequestPost(ctx){
+  const mod = await import("./project_applications.js");
+  const req = await ctx.request.clone().json().catch(() => ({}));
+  const nextReq = new Request(ctx.request.url, {
+    method: "POST",
+    headers: ctx.request.headers,
+    body: JSON.stringify({ ...req, action: "submit" })
+  });
+  return mod.onRequestPost({ ...ctx, request: nextReq });
+}

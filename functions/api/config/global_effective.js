@@ -1,9 +1,12 @@
-import {json} from "../../_lib.js"
-import {getEffectiveGlobalSettings} from "./_helper/config_service.js"
+import { json, requireAuth } from "../../_lib.js";
+import { getEffectiveGlobalSettingsService } from "../../services/config/config_service.js";
 
-export async function onRequestGet({env}){
+export async function onRequestGet({ request, env }){
+  const a = await requireAuth(env, request);
+  if(!a.ok) return a.res;
 
-  const data=await getEffectiveGlobalSettings(env)
+  const result = await getEffectiveGlobalSettingsService(env, a);
+  if(result?.error) return json(result.status || 500, result.status === 403 ? "forbidden" : "server_error", result);
 
-  return json(200,"ok",data)
+  return json(200, "ok", result);
 }

@@ -1,34 +1,23 @@
-import {json,requireAuth,hasRole,readJson} from "../../_lib.js"
-import {getGlobalSettings,saveGlobalSettings} from "./_helper/config_service.js"
+import { json, requireAuth, readJson } from "../../_lib.js";
+import { getGlobalSettingsService, saveGlobalSettingsService } from "../../services/config/config_service.js";
 
-function canManage(roles){
-  return hasRole(roles,["super_admin","admin"])
+export async function onRequestGet({ request, env }){
+  const a = await requireAuth(env, request);
+  if(!a.ok) return a.res;
+
+  const result = await getGlobalSettingsService(env, a);
+  if(result?.error) return json(result.status || 500, result.status === 403 ? "forbidden" : "server_error", result);
+
+  return json(200, "ok", result.settings || {});
 }
 
-export async function onRequestGet({request,env}){
+export async function onRequestPost({ request, env }){
+  const a = await requireAuth(env, request);
+  if(!a.ok) return a.res;
 
-  const a=await requireAuth(env,request)
-  if(!a.ok) return a.res
+  const body = await readJson(request) || {};
+  const result = await saveGlobalSettingsService(env, a, body);
+  if(result?.error) return json(result.status || 500, result.status === 403 ? "forbidden" : "server_error", result);
 
-  if(!canManage(a.roles))
-    return json(403,"forbidden",null)
-
-  const data=await getGlobalSettings(env)
-
-  return json(200,"ok",data)
-}
-
-export async function onRequestPost({request,env}){
-
-  const a=await requireAuth(env,request)
-  if(!a.ok) return a.res
-
-  if(!canManage(a.roles))
-    return json(403,"forbidden",null)
-
-  const body=await readJson(request)||{}
-
-  const r=await saveGlobalSettings(env,body,a.uid||null)
-
-  return json(200,"ok",r)
+  return json(200, "ok", result);
 }

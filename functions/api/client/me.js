@@ -1,8 +1,8 @@
-import * as impl from "./_helper/me.js";
+import { json, requirePortalAuth } from "../../_lib.js";
+import { getClientMe } from "../../services/client/client_me_service.js";
 
-export const onRequestGet = impl.onRequestGet;
-export const onRequestPost = impl.onRequestPost;
-export const onRequestPut = impl.onRequestPut;
-export const onRequestPatch = impl.onRequestPatch;
-export const onRequestDelete = impl.onRequestDelete;
-export const onRequestOptions = impl.onRequestOptions;
+export async function onRequestGet({ request, env }) {
+  const a = await requirePortalAuth(env, request, "client");
+  if (!a.ok) return a.res;
+  return json(200, "ok", await getClientMe(env, a));
+}

@@ -1,8 +1,1 @@
-import * as impl from "./_helper/booking_patch.js";
-
-export const onRequestGet = impl.onRequestGet;
-export const onRequestPost = impl.onRequestPost;
-export const onRequestPut = impl.onRequestPut;
-export const onRequestPatch = impl.onRequestPatch;
-export const onRequestDelete = impl.onRequestDelete;
-export const onRequestOptions = impl.onRequestOptions;
+export { onRequestPatch as onRequestPost } from "./project_bookings.js";

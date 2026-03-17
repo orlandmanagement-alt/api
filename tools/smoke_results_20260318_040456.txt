@@ -1,0 +1,54 @@
+SMOKE TEST START Wed Mar 18 04:04:56 WIB 2026
+BASE=https://api.orlandmanagement.com
+
+[404] /functions/api/dashboard_summary | content-type=unknown
+[404] /functions/api/dashboard/summary | content-type=unknown
+[404] /functions/api/client/me | content-type=unknown
+[404] /functions/api/client/project_invites | content-type=unknown
+[404] /functions/api/client/project_shortlists | content-type=unknown
+[404] /functions/api/client/project_bookings | content-type=unknown
+[404] /functions/api/talent/me | content-type=unknown
+[404] /functions/api/talent/profile | content-type=unknown
+[404] /functions/api/talent/project_applications | content-type=unknown
+[404] /functions/api/talent/project_invites_detail?invite_id=test | content-type=unknown
+[404] /functions/api/talent/project_invites_respond | content-type=unknown
+[404] /functions/api/users/admin | content-type=unknown
+[404] /functions/api/users/admin_users | content-type=unknown
+[404] /functions/api/users/client | content-type=unknown
+[404] /functions/api/users/client_users | content-type=unknown
+[404] /functions/api/users/talent | content-type=unknown
+[404] /functions/api/users/talent_users | content-type=unknown
+[404] /functions/api/users/options | content-type=unknown
+[404] /functions/api/users/lifecycle | content-type=unknown
+[404] /functions/api/users/offboarding | content-type=unknown
+[404] /functions/api/users/talent_backfill | content-type=unknown
+[404] /functions/api/admin/security_kpi_get | content-type=unknown
+[404] /functions/api/admin/sessions_monitor_get | content-type=unknown
+[404] /functions/api/admin/users_security_monitor_get | content-type=unknown
+[404] /functions/api/admin/sessions?user_id=test | content-type=unknown
+[404] /functions/api/config/global | content-type=unknown
+[404] /functions/api/config/global_effective | content-type=unknown
+[404] /functions/api/config/otp | content-type=unknown
+[404] /functions/api/config/analytics | content-type=unknown
+[404] /functions/api/config/snapshots | content-type=unknown
+[404] /functions/api/config/verify | content-type=unknown
+[404] /functions/api/security/final-health | content-type=unknown
+[404] /functions/api/security/mfa-policy | content-type=unknown
+[404] /functions/api/security/login-timeline | content-type=unknown
+[404] /functions/api/verification/healthcheck | content-type=unknown
+[404] /functions/api/verification/recent_events | content-type=unknown
+
+JSON BODY SAMPLES
+
+===== /functions/api/dashboard_summary =====
+
+
+===== /functions/api/config/verify =====
+
+
+===== /functions/api/security/final-health =====
+
+
+===== /functions/api/verification/healthcheck =====
+
+

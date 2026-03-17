@@ -1,5 +1,5 @@
-import { json, requireAuth, hasRole, readJson } from "../../_lib.js";
-import { getSettingsByKeys, saveScopedSettings } from "./_helper/config_service.js";
+import { json, requireAuth, readJson } from "../../_lib.js";
+import { getScopedSettingsService, saveScopedSettingsService } from "../../services/config/config_service.js";
 
 const KEYS = [
   "analytics.enabled",
@@ -8,21 +8,23 @@ const KEYS = [
   "analytics.exclude_admin"
 ];
 
-function canManage(roles){
-  return hasRole(roles, ["super_admin", "admin"]);
-}
-
 export async function onRequestGet({ request, env }){
   const a = await requireAuth(env, request);
   if(!a.ok) return a.res;
-  if(!canManage(a.roles)) return json(403, "forbidden", null);
-  return json(200, "ok", await getSettingsByKeys(env, KEYS));
+
+  const result = await getScopedSettingsService(env, a, KEYS);
+  if(result?.error) return json(result.status || 500, result.status === 403 ? "forbidden" : "server_error", result);
+
+  return json(200, "ok", result.settings || {});
 }
 
 export async function onRequestPost({ request, env }){
   const a = await requireAuth(env, request);
   if(!a.ok) return a.res;
-  if(!canManage(a.roles)) return json(403, "forbidden", null);
+
   const body = await readJson(request) || {};
-  return json(200, "ok", await saveScopedSettings(env, body, a.uid || null, KEYS));
+  const result = await saveScopedSettingsService(env, a, body, KEYS);
+  if(result?.error) return json(result.status || 500, result.status === 403 ? "forbidden" : "server_error", result);
+
+  return json(200, "ok", result);
 }
