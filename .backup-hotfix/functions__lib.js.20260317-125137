@@ -432,37 +432,3 @@ export async function applyLoginFailPolicy(env, user_id, now, opt) {
 export async function clearLoginFailPolicy(env, user_id, now) {
   return true;
 }
-
-
-export async function auditEvent(env, request, payload = {}) {
-  const route = payload.route || (() => {
-    try {
-      const u = new URL(request.url);
-      return `${request.method} ${u.pathname}`;
-    } catch {
-      return String(payload.route || "http");
-    }
-  })();
-
-  return await audit(env, {
-    actor_user_id: payload.actor_user_id || payload.actorUserId || null,
-    action: payload.action || "event",
-    route,
-    http_status: payload.http_status || payload.httpStatus || 200,
-    meta: payload.meta || {}
-  });
-}
-
-
-export async function revokeAllSessionsForUser(env, user_id) {
-  try {
-    await env.DB.prepare(`
-      UPDATE sessions
-      SET revoked_at = ?
-      WHERE user_id = ? AND revoked_at IS NULL
-    `).bind(nowSec(), user_id).run();
-    return true;
-  } catch {
-    return false;
-  }
-}
