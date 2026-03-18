@@ -20,8 +20,9 @@ export async function getRolesForUser(env, user_id) {
 
 export function portalAccessFromRoles(roles) {
   const r = new Set((roles || []).map(x => String(x)));
+
   return {
-    dashboard: r.has("super_admin") || r.has("admin") || r.has("staff"),
+    dashboard: r.has("super_admin") || r.has("admin") || r.has("staff") || r.has("security_admin"),
     talent: r.has("super_admin") || r.has("admin") || r.has("staff") || r.has("talent"),
     client: r.has("super_admin") || r.has("admin") || r.has("staff") || r.has("client")
   };

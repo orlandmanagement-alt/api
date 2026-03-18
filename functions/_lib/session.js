@@ -1,15 +1,12 @@
-import { json } from "./response.js";
+import { nowSec } from "./time.js";
 import { parseCookies } from "./request.js";
-
-function toNum(v, d) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : d;
-}
+import { json } from "./response.js";
 
 export async function createSession(env, user_id, roles) {
-  const now = Math.floor(Date.now() / 1000);
+  const now = nowSec();
   const r = Array.isArray(roles) ? roles : [];
-  const ttlMin = toNum(env.SESSION_TTL_MIN, 720);
+
+  const ttlMin = Number(env.SESSION_TTL_MIN || 720);
   const ttl = Math.max(10, ttlMin) * 60;
   const exp = now + ttl;
   const sid = crypto.randomUUID();
@@ -37,26 +34,23 @@ export async function createSession(env, user_id, roles) {
   return { sid, exp, ttl };
 }
 
-export async function revokeSessionBySid(env, sid, reason = null) {
+export async function revokeSessionBySid(env, sid) {
   try {
     await env.DB.prepare(`
       UPDATE sessions
-      SET revoked_at = ?, revoke_reason = COALESCE(?, revoke_reason)
+      SET revoked_at = ?
       WHERE id = ?
-    `).bind(Math.floor(Date.now() / 1000), reason, sid).run();
-    return true;
-  } catch {
-    return false;
-  }
+    `).bind(nowSec(), sid).run();
+  } catch {}
 }
 
-export async function revokeAllSessionsForUser(env, user_id, reason = null) {
+export async function revokeAllSessionsForUser(env, user_id) {
   try {
     await env.DB.prepare(`
       UPDATE sessions
-      SET revoked_at = ?, revoke_reason = COALESCE(?, revoke_reason)
+      SET revoked_at = ?
       WHERE user_id = ? AND revoked_at IS NULL
-    `).bind(Math.floor(Date.now() / 1000), reason, user_id).run();
+    `).bind(nowSec(), user_id).run();
     return true;
   } catch {
     return false;
@@ -83,13 +77,11 @@ export async function requireAuth(env, request) {
     return { ok: false, res: json(401, "unauthorized", null) };
   }
 
-  if (!row || row.revoked_at) {
-    return { ok: false, res: json(401, "unauthorized", null) };
-  }
+  if (!row) return { ok: false, res: json(401, "unauthorized", null) };
+  if (row.revoked_at) return { ok: false, res: json(401, "unauthorized", null) };
 
-  const now = Math.floor(Date.now() / 1000);
   const exp = Number(row.expires_at || 0);
-  if (!Number.isFinite(exp) || now > exp) {
+  if (!Number.isFinite(exp) || nowSec() > exp) {
     return { ok: false, res: json(401, "unauthorized", null) };
   }
 
@@ -98,7 +90,7 @@ export async function requireAuth(env, request) {
       UPDATE sessions
       SET last_seen_at = ?
       WHERE id = ?
-    `).bind(now, row.id).run();
+    `).bind(nowSec(), row.id).run();
   } catch {}
 
   let roles = [];

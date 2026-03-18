@@ -1,6 +1,6 @@
-import { canAccessPortal } from "./roles.js";
-import { json } from "./response.js";
+import { portalAccessFromRoles } from "./roles.js";
 import { requireAuth } from "./session.js";
+import { json } from "./response.js";
 
 export function portalBaseUrl(env, portal) {
   if (portal === "dashboard") return env.DASHBOARD_URL || "https://dashboard.orlandmanagement.com";
@@ -36,7 +36,8 @@ export async function requirePortalAuth(env, request, portal) {
   const a = await requireAuth(env, request);
   if (!a.ok) return a;
 
-  if (!canAccessPortal(a.roles, portal)) {
+  const p = portalAccessFromRoles(a.roles);
+  if (!p[String(portal || "")]) {
     return {
       ok: false,
       res: json(403, "forbidden", {

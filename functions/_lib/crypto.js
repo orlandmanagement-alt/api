@@ -1,3 +1,15 @@
+export function timingSafeEqual(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  if (a.length !== b.length) return false;
+
+  let r = 0;
+  for (let i = 0; i < a.length; i++) {
+    r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return r === 0;
+}
+
 export function randomB64(bytes = 18) {
   const u8 = crypto.getRandomValues(new Uint8Array(bytes));
   let s = "";
@@ -32,16 +44,4 @@ export async function pbkdf2Hash(password, saltB64, iterations) {
   );
 
   return btoa(String.fromCharCode(...new Uint8Array(bits)));
-}
-
-export function timingSafeEqual(a, b) {
-  a = String(a || "");
-  b = String(b || "");
-  if (a.length !== b.length) return false;
-
-  let r = 0;
-  for (let i = 0; i < a.length; i++) {
-    r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return r === 0;
 }
