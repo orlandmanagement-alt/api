@@ -1,20 +1,22 @@
 import { json, requireAuth } from "../../_lib.js";
-import { getTalentInviteDetail } from "../../services/talent/talent_invites_service.js";
+import { getTalentInviteDetailService } from "../../services/talent/talent_invites_service.js";
 
 export async function onRequestGet({ request, env }){
-  const a = await requireAuth(env, request);
-  if(!a.ok) return a.res;
+  const auth = await requireAuth(env, request);
+  if(!auth.ok) return auth.res;
 
   const url = new URL(request.url);
-  const invite_id = String(url.searchParams.get("invite_id") || "").trim();
+  const result = await getTalentInviteDetailService(env, auth, {
+    invite_id: url.searchParams.get("invite_id") || ""
+  });
 
-  const result = await getTalentInviteDetail(env, a, invite_id);
   if(result?.error){
-    let st = "server_error";
-    if(result.status === 400) st = "invalid_input";
-    else if(result.status === 403) st = "forbidden";
-    else if(result.status === 404) st = "not_found";
-    return json(result.status || 500, st, result);
+    const st = result.status || 500;
+    let name = "server_error";
+    if(st === 400) name = "invalid_input";
+    else if(st === 403) name = "forbidden";
+    else if(st === 404) name = "not_found";
+    return json(st, name, result);
   }
 
   return json(200, "ok", result);

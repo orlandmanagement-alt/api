@@ -1,24 +1,40 @@
-import { json, requireAuth, readJson } from "../../_lib.js";
-import { submitTalentApplication, withdrawTalentApplication } from "../../services/talent/talent_applications_service.js";
+import { json, requireAuth } from "../../_lib.js";
+import { listTalentApplicationsService, applyTalentProjectService, withdrawTalentApplicationService } from "../../services/talent/talent_applications_service.js";
+
+export async function onRequestGet({ request, env }){
+  const auth = await requireAuth(env, request);
+  if(!auth.ok) return auth.res;
+
+  const result = await listTalentApplicationsService(env, auth);
+  if(result?.error){
+    const st = result.status || 500;
+    const name = st === 403 ? "forbidden" : "server_error";
+    return json(st, name, result);
+  }
+
+  return json(200, "ok", result);
+}
 
 export async function onRequestPost({ request, env }){
-  const a = await requireAuth(env, request);
-  if(!a.ok) return a.res;
+  const auth = await requireAuth(env, request);
+  if(!auth.ok) return auth.res;
 
-  const body = await readJson(request) || {};
+  let body = {};
+  try{ body = await request.json(); }catch{}
+
   const action = String(body.action || "").trim().toLowerCase();
-
   const result = action === "withdraw"
-    ? await withdrawTalentApplication(env, a, body)
-    : await submitTalentApplication(env, a, body);
+    ? await withdrawTalentApplicationService(env, auth, body)
+    : await applyTalentProjectService(env, auth, body);
 
   if(result?.error){
-    let st = "server_error";
-    if(result.status === 400) st = "invalid_input";
-    else if(result.status === 403) st = "forbidden";
-    else if(result.status === 404) st = "not_found";
-    else if(result.status === 409) st = "conflict";
-    return json(result.status || 500, st, result);
+    const st = result.status || 500;
+    let name = "server_error";
+    if(st === 400) name = "invalid_input";
+    else if(st === 403) name = "forbidden";
+    else if(st === 404) name = "not_found";
+    else if(st === 409) name = "conflict";
+    return json(st, name, result);
   }
 
   return json(200, "ok", result);

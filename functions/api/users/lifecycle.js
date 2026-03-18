@@ -1,8 +1,2 @@
-import * as impl from "./_helper/lifecycle.js";
-
-export const onRequestGet = impl.onRequestGet;
-export const onRequestPost = impl.onRequestPost;
-export const onRequestPut = impl.onRequestPut;
-export const onRequestPatch = impl.onRequestPatch;
-export const onRequestDelete = impl.onRequestDelete;
-export const onRequestOptions = impl.onRequestOptions;
+import { onRequestGet, onRequestPost } from "../../services/users/users_lifecycle_service.js";
+export { onRequestGet, onRequestPost };
