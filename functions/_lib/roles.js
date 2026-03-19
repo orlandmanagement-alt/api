@@ -5,14 +5,9 @@ export function hasRole(roles, allowed) {
 
 export async function getRolesForUser(env, user_id) {
   try {
-    const r = await env.DB.prepare(`
-      SELECT r.name AS name
-      FROM user_roles ur
-      JOIN roles r ON r.id = ur.role_id
-      WHERE ur.user_id = ?
-    `).bind(user_id).all();
-
-    return (r.results || []).map(x => x.name);
+    // SKEMA BARU: Ambil langsung dari kolom `role` di tabel users (SSO DB)
+    const r = await env.DB.prepare("SELECT role FROM users WHERE id = ?").bind(user_id).first();
+    return r && r.role ? [r.role] : [];
   } catch {
     return [];
   }
@@ -20,7 +15,6 @@ export async function getRolesForUser(env, user_id) {
 
 export function portalAccessFromRoles(roles) {
   const r = new Set((roles || []).map(x => String(x)));
-
   return {
     dashboard: r.has("super_admin") || r.has("admin") || r.has("staff") || r.has("security_admin"),
     talent: r.has("super_admin") || r.has("admin") || r.has("staff") || r.has("talent"),

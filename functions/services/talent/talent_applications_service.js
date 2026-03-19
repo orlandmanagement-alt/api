@@ -1,74 +1,38 @@
-import { nowSec, hasRole } from "../../_lib.js";
-import { getProjectRoleForApply, getExistingApplication, createProjectApplication, getApplicationById, withdrawApplication } from "../../repos/talent_repo.js";
+import { getProjectRoleForApply, getExistingApplication, createProjectApplication, getApplicationById, withdrawApplication, listTalentApplications } from "../../repos/talent_repo.js";
 
-export async function submitTalentApplication(env, auth, body){
-  if(!hasRole(auth.roles, ["talent", "super_admin", "admin"])) {
-    return { error: "role_not_allowed", status: 403 };
-  }
+function nowSec() { return Math.floor(Date.now() / 1000); }
 
-  const project_role_id = String(body.project_role_id || "").trim();
-  const message = String(body.message || "").trim();
-
-  if(!project_role_id){
-    return { error: "project_role_id_required", status: 400 };
-  }
-
-  const role = await getProjectRoleForApply(env, project_role_id);
-  if(!role){
-    return { error: "project_role_not_found", status: 404 };
-  }
-
-  const exists = await getExistingApplication(env, project_role_id, auth.uid);
-  if(exists){
-    return {
-      error: "application_already_exists",
-      status: 409,
-      id: exists.id,
-      application_status: exists.status || ""
-    };
-  }
-
-  const created = await createProjectApplication(env, {
-    project_role_id,
-    talent_user_id: auth.uid,
-    status: "submitted",
-    message,
-    created_at: nowSec()
-  });
-
-  return {
-    ...created,
-    project_title: role.project_title || "",
-    role_title: role.title || ""
-  };
+export async function listTalentApplicationsService(env, auth) {
+  if(!auth.roles.includes('talent')) return { error: "talent_only", status: 403 };
+  const items = await listTalentApplications(env, auth.uid);
+  return { items };
 }
 
-export async function withdrawTalentApplication(env, auth, body){
-  if(!hasRole(auth.roles, ["talent", "super_admin", "admin"])) {
-    return { error: "role_not_allowed", status: 403 };
-  }
+export async function applyTalentProjectService(env, auth, body) {
+  if(!auth.roles.includes('talent')) return { error: "talent_only", status: 403 };
+  const roleId = String(body.project_role_id || "").trim();
+  
+  const role = await getProjectRoleForApply(env, roleId);
+  if(!role) return { error: "project_role_not_found", status: 404 };
+  if(role.project_status !== 'published' && role.project_status !== 'open') return { error: "project_not_open", status: 400 };
 
-  const application_id = String(body.application_id || "").trim();
-  if(!application_id){
-    return { error: "application_id_required", status: 400 };
-  }
+  const existing = await getExistingApplication(env, roleId, auth.uid);
+  if(existing) return { error: "already_applied", status: 409 };
 
-  const found = await getApplicationById(env, application_id);
-  if(!found){
-    return { error: "application_not_found", status: 404 };
-  }
+  const result = await createProjectApplication(env, {
+    project_role_id: roleId, talent_user_id: auth.uid,
+    status: "pending", message: String(body.message || "").trim(), created_at: nowSec()
+  });
+  return result;
+}
 
-  if(String(found.talent_user_id || "") !== String(auth.uid)){
-    return { error: "application_not_owned_by_user", status: 403 };
-  }
+export async function withdrawTalentApplicationService(env, auth, body) {
+  if(!auth.roles.includes('talent')) return { error: "talent_only", status: 403 };
+  const appId = String(body.application_id || "").trim();
+  
+  const app = await getApplicationById(env, appId);
+  if(!app) return { error: "application_not_found", status: 404 };
+  if(app.talent_user_id !== auth.uid) return { error: "forbidden", status: 403 };
 
-  if(["withdrawn", "accepted", "rejected"].includes(String(found.status || "").toLowerCase())){
-    return {
-      error: "application_status_not_withdrawable",
-      status: 409,
-      application_status: found.status || ""
-    };
-  }
-
-  return await withdrawApplication(env, application_id, nowSec());
+  return await withdrawApplication(env, appId, nowSec());
 }

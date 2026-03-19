@@ -1,1 +1,1 @@
-export { onRequestPatch as onRequestPost } from "./project_bookings.js";
+export { onRequestPost } from "./project_bookings.js";

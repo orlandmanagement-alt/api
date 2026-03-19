@@ -1,8 +1,3 @@
-import * as impl from "./_helper/ip_blocks_monitor_get.js";
-
-export const onRequestGet = impl.onRequestGet;
-export const onRequestPost = impl.onRequestPost;
-export const onRequestPut = impl.onRequestPut;
-export const onRequestPatch = impl.onRequestPatch;
-export const onRequestDelete = impl.onRequestDelete;
-export const onRequestOptions = impl.onRequestOptions;
+export async function onRequestGet(){ 
+  return new Response("id,ip,reason\n1,192.168.0.1,Managed via Cloudflare WAF", { status: 200, headers: { "content-type": "text/csv" } }); 
+}

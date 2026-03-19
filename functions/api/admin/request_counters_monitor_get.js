@@ -1,8 +1,3 @@
-import * as impl from "./_helper/request_counters_monitor_get.js";
-
-export const onRequestGet = impl.onRequestGet;
-export const onRequestPost = impl.onRequestPost;
-export const onRequestPut = impl.onRequestPut;
-export const onRequestPatch = impl.onRequestPatch;
-export const onRequestDelete = impl.onRequestDelete;
-export const onRequestOptions = impl.onRequestOptions;
+export async function onRequestGet(){ 
+  return new Response("metric,count\nAPI_Requests,Managed via Cloudflare Analytics", { status: 200, headers: { "content-type": "text/csv" } }); 
+}

@@ -1,10 +1,9 @@
-import { hasRole } from "../../_lib.js";
 import { getDashboardSummary } from "../../repos/dashboard_repo.js";
 
-export async function getDashboardSummaryService(env, auth){
-  if(!hasRole(auth.roles, ["super_admin", "admin", "staff", "security_admin"])){
-    return { error: "forbidden", status: 403 };
-  }
+function hasRole(roles, allowed) { return allowed.some(r => roles.includes(r)); }
 
-  return await getDashboardSummary(env);
+export async function getDashboardSummaryService(env, auth) {
+  if(!hasRole(auth.roles, ["super_admin", "admin", "staff"])) return { error: "forbidden", status: 403 };
+  const data = await getDashboardSummary(env);
+  return data;
 }

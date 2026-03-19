@@ -1,8 +1,14 @@
-import * as impl from "./_helper/projects_monitor_get.js";
+import { jsonOk, jsonError } from "../../_lib/response.js";
+import { requireAuth } from "../../_lib/session.js";
 
-export const onRequestGet = impl.onRequestGet;
-export const onRequestPost = impl.onRequestPost;
-export const onRequestPut = impl.onRequestPut;
-export const onRequestPatch = impl.onRequestPatch;
-export const onRequestDelete = impl.onRequestDelete;
-export const onRequestOptions = impl.onRequestOptions;
+export async function onRequestGet({ request, env }){
+  const a = await requireAuth(env, request);
+  if(!a.ok) return a.res;
+  
+  if(!a.roles.includes('admin') && !a.roles.includes('super_admin')) return jsonError("forbidden", 403);
+  
+  // Shim Data dari DB CLIENT
+  if(!env.DB_CLIENT) return jsonOk({ items: [] });
+  const rows = await env.DB_CLIENT.prepare("SELECT id, title, status, created_at FROM projects ORDER BY created_at DESC LIMIT 50").all();
+  return jsonOk({ items: rows.results || [] });
+}

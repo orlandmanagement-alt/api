@@ -1,4 +1,6 @@
-import { json, requireAuth } from "../../_lib.js";
+import { jsonOk, jsonError } from "../../_lib/response.js";
+import { requireAuth } from "../../_lib/session.js";
+import { readJson } from "../../_lib/request.js";
 import { getTalentProfileService, putTalentProfileService } from "../../services/talent/talent_profile_service.js";
 
 export async function onRequestGet({ request, env }){
@@ -6,33 +8,16 @@ export async function onRequestGet({ request, env }){
   if(!auth.ok) return auth.res;
 
   const result = await getTalentProfileService(env, auth);
-  if(result?.error){
-    const st = result.status || 500;
-    let name = "server_error";
-    if(st === 403) name = "forbidden";
-    else if(st === 404) name = "not_found";
-    return json(st, name, result);
-  }
-
-  return json(200, "ok", result);
+  if(result?.error) return jsonError(result.error, result.status || 500);
+  return jsonOk(result);
 }
 
 export async function onRequestPut({ request, env }){
   const auth = await requireAuth(env, request);
   if(!auth.ok) return auth.res;
 
-  let body = {};
-  try{ body = await request.json(); }catch{}
-
+  const body = await readJson(request) || {};
   const result = await putTalentProfileService(env, auth, body);
-  if(result?.error){
-    const st = result.status || 500;
-    let name = "server_error";
-    if(st === 400) name = "invalid_input";
-    else if(st === 403) name = "forbidden";
-    else if(st === 404) name = "not_found";
-    return json(st, name, result);
-  }
-
-  return json(200, "ok", result);
+  if(result?.error) return jsonError(result.error, result.status || 500);
+  return jsonOk(result);
 }

@@ -1,4 +1,6 @@
-import { json, requireAuth } from "../../_lib.js";
+import { json } from "../../_lib/response.js";
+import { requireAuth } from "../../_lib/session.js";
+import { readJson } from "../../_lib/request.js";
 import { listClientBookingsService, createClientBookingService, patchClientBookingService } from "../../services/client/client_bookings_service.js";
 
 export async function onRequestGet({ request, env }){
@@ -6,16 +8,12 @@ export async function onRequestGet({ request, env }){
   if(!auth.ok) return auth.res;
 
   const url = new URL(request.url);
-  const result = await listClientBookingsService(env, auth, {
-    project_id: url.searchParams.get("project_id") || ""
-  });
+  const result = await listClientBookingsService(env, auth, { project_id: url.searchParams.get("project_id") || "" });
 
-  if(result?.error){
+  if(result?.error) {
     const st = result.status || 500;
-    const name = st === 403 ? "forbidden" : "server_error";
-    return json(st, name, result);
+    return json(st, st === 403 ? "forbidden" : "server_error", result);
   }
-
   return json(200, "ok", result);
 }
 
@@ -23,11 +21,10 @@ export async function onRequestPost({ request, env }){
   const auth = await requireAuth(env, request);
   if(!auth.ok) return auth.res;
 
-  let body = {};
-  try{ body = await request.json(); }catch{}
-
+  const body = await readJson(request) || {};
   const mode = String(body.mode || "").trim().toLowerCase();
-  const result = mode === "patch"
+  
+  const result = mode === "patch" 
     ? await patchClientBookingService(env, auth, body)
     : await createClientBookingService(env, auth, body);
 
@@ -40,6 +37,5 @@ export async function onRequestPost({ request, env }){
     else if(st === 409) name = "conflict";
     return json(st, name, result);
   }
-
   return json(200, "ok", result);
 }

@@ -1,2 +1,21 @@
-import { onRequestGet, onRequestPost } from "../../services/users/users_lifecycle_service.js";
-export { onRequestGet, onRequestPost };
+import { jsonOk, jsonError } from "../../_lib/response.js";
+import { requireAuth } from "../../_lib/session.js";
+import { readJson } from "../../_lib/request.js";
+import { listLifecycleUsersService, postLifecycleActionService } from "../../services/users/users_lifecycle_service.js";
+
+export async function onRequestGet({ request, env }){
+  const auth = await requireAuth(env, request);
+  if(!auth.ok) return auth.res;
+  const result = await listLifecycleUsersService(env, auth);
+  if(result?.error) return jsonError(result.error, result.status || 500);
+  return jsonOk(result);
+}
+
+export async function onRequestPost({ request, env }){
+  const auth = await requireAuth(env, request);
+  if(!auth.ok) return auth.res;
+  const body = await readJson(request) || {};
+  const result = await postLifecycleActionService(env, auth, body);
+  if(result?.error) return jsonError(result.error, result.status || 500);
+  return jsonOk(result);
+}
