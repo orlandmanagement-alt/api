@@ -18,7 +18,6 @@ export async function getSessionsByUser(env, user_id){
 }
 
 export async function revokeSessionRow(env, sid, now, reason){
-  // Skema baru: Hapus sesi secara permanen, bukan di-update
   await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(sid).run();
 }
 
@@ -27,7 +26,6 @@ export async function revokeUserSessionsRows(env, user_id, now, reason){
 }
 
 export async function rotateUserSessionVersion(env, user_id, nextVersion, now){
-  // No-op: Skema baru tidak menggunakan session_version untuk efisiensi.
   return;
 }
 
@@ -37,7 +35,7 @@ export async function listSecurityKpiUsers(env, limit){
            0 AS must_change_password, 0 AS mfa_enabled, locked_until, fail_count AS pw_fail_count,
            NULL AS last_login_at, NULL AS last_login_success_at, NULL AS last_login_fail_at,
            created_at, created_at AS updated_at
-    FROM users ORDER BY created_at DESC LIMIT ?
+        FROM users ORDER BY created_at DESC LIMIT ?
   `).bind(limit).all();
   return r.results || [];
 }
@@ -64,17 +62,6 @@ export async function listSessionsMonitor(env, limit){
     ORDER BY s.created_at DESC LIMIT ?
   `).bind(limit).all();
   return r.results || [];
-}
-
-export async function getDisplayNamesForAdmin(env, userIds) {
-  if (!userIds || userIds.length === 0 || !env.DB) return {};
-  const uniqueIds = [...new Set(userIds.filter(Boolean))];
-  if(uniqueIds.length === 0) return {};
-  const placeholders = uniqueIds.map(() => '?').join(',');
-  const res = await env.DB.prepare(`SELECT id, full_name FROM users WHERE id IN (${placeholders})`).bind(...uniqueIds).all();
-  const map = {};
-  (res.results || []).forEach(u => map[u.id] = u.full_name);
-  return map;
 }
 
 export async function getDisplayNamesForAdmin(env, userIds) {
