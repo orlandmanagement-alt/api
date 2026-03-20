@@ -1,5 +1,5 @@
 import { nowSec } from "./time.js";
-import { parseCookies } from "./request.js"; // Pastikan ini mengarah ke file yang tepat sesuai struktur Anda
+import { parseCookies } from "./cookies.js"; // Pastikan ini mengarah ke file yang tepat sesuai struktur Anda
 import { jsonUnauthorized, jsonError } from "./response.js"; // Gunakan shortcut agar bebas error
 
 export async function createSession(env, user_id, roles) {
