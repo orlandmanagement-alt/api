@@ -1,39 +1,37 @@
-import { jsonOk, jsonError } from "../../_lib/response.js";
-import { parseCookies } from "../../_lib/cookies.js";
+import { jsonOk, jsonError } from "../../../_lib/response.js";
+import { requireAuth } from "../../../_lib/session.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+    const { request, env } = context;
+    const auth = await requireAuth(env, request);
+    if (!auth.ok) return auth.res;
+
+    const body = await request.json().catch(() => ({}));
+    const now = Math.floor(Date.now() / 1000);
+
     try {
-        const cookies = parseCookies(request);
-        if (!cookies.sid) return jsonError("Unauthorized", 401);
-        
-        const now = Math.floor(Date.now() / 1000);
-        const session = await env.DB.prepare("SELECT user_id, role FROM sessions WHERE id = ? AND expires_at > ?").bind(cookies.sid, now).first();
-        if (!session || session.role !== 'client') return jsonError("Akses ditolak", 403);
+        // Cek apakah client sudah punya data organisasi
+        let org = await env.DB.prepare("SELECT id FROM client_organizations WHERE owner_user_id = ?").bind(auth.uid).first();
+        let orgId = org ? org.id : `org_${crypto.randomUUID()}`;
 
-        const body = await request.json().catch(() => ({}));
-        if (!body.company_name) return jsonError("Nama Perusahaan wajib diisi", 400);
+        if (!org) {
+            // Insert Baru
+            await env.DB.prepare("INSERT INTO client_organizations (id, owner_user_id, name, industry_type, status, verification_status, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', 'unverified', ?, ?)")
+                .bind(orgId, auth.uid, body.company_name || 'Nama Perusahaan', body.industry_type || '', now, now).run();
+            
+            await env.DB.prepare("INSERT INTO client_profiles (id, organization_id, contact_name, contact_phone, billing_json, address_json, updated_at) VALUES (?, ?, ?, ?, ?, '{}', ?)")
+                .bind(`cprof_${crypto.randomUUID()}`, orgId, body.contact_name || '', body.contact_phone || '', JSON.stringify(body.billing || {}), now).run();
+        } else {
+            // Update Data Lama
+            await env.DB.prepare("UPDATE client_organizations SET name = ?, industry_type = ?, updated_at = ? WHERE id = ?")
+                .bind(body.company_name || 'Nama Perusahaan', body.industry_type || '', now, orgId).run();
+            
+            await env.DB.prepare("UPDATE client_profiles SET contact_name = ?, contact_phone = ?, billing_json = ?, updated_at = ? WHERE organization_id = ?")
+                .bind(body.contact_name || '', body.contact_phone || '', JSON.stringify(body.billing || {}), now, orgId).run();
+        }
 
-        // Update Tabel Utama (Update nama di tabel users juga agar sinkron dengan SSO)
-        await env.DB.prepare("UPDATE users SET full_name = ? WHERE id = ?").bind(body.contact_name || body.company_name, session.user_id).run();
-
-        // Update Profil Client
-        const query = `
-            UPDATE client_profiles
-            SET company_name = ?, industry_type = ?, contact_name = ?, contact_phone = ?, website_url = ?, billing_json = ?, updated_at = ?
-            WHERE user_id = ?
-        `;
-        
-        await env.DB.prepare(query).bind(
-            body.company_name,
-            body.industry_type || null,
-            body.contact_name || null,
-            body.contact_phone || null,
-            body.website_url || null,
-            JSON.stringify(body.billing || {}),
-            now,
-            session.user_id
-        ).run();
-
-        return jsonOk({ message: "Profil Perusahaan berhasil diperbarui" });
-    } catch (e) { return jsonError("Server Error", 500); }
+        return jsonOk({ message: "Profil perusahaan berhasil diperbarui!" });
+    } catch (e) {
+        return jsonError("Terjadi kesalahan sistem saat menyimpan profil.", 500);
+    }
 }
