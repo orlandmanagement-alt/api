@@ -10,7 +10,7 @@ export async function createSession(env, user_id, roles) {
   
   const primaryRole = Array.isArray(roles) && roles.length > 0 ? roles[0] : 'talent';
 
-  await env.DB.prepare(`
+  await env.DB_SSO.prepare(`
     INSERT INTO sessions (id, user_id, role, created_at, expires_at)
     VALUES (?, ?, ?, ?, ?)
   `).bind(sid, user_id, primaryRole, now, exp).run();
@@ -20,13 +20,13 @@ export async function createSession(env, user_id, roles) {
 
 export async function revokeSessionBySid(env, sid) {
   try {
-    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(sid).run();
+    await env.DB_SSO.prepare("DELETE FROM sessions WHERE id = ?").bind(sid).run();
   } catch {}
 }
 
 export async function revokeAllSessionsForUser(env, user_id) {
   try {
-    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user_id).run();
+    await env.DB_SSO.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user_id).run();
     return true;
   } catch {
     return false;
@@ -43,7 +43,7 @@ export async function requireAuth(env, request) {
 
   let row = null;
   try {
-    row = await env.DB.prepare(`
+    row = await env.DB_SSO.prepare(`
       SELECT id, user_id, role, expires_at
       FROM sessions
       WHERE id = ?

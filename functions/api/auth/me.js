@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
         if (!auth.ok) return auth.res; // Akan mengembalikan jsonUnauthorized jika gagal
 
         // 2. Ambil data dasar user dari tabel users
-        const user = await env.DB.prepare("SELECT id, full_name, email, role FROM users WHERE id = ?").bind(auth.uid).first();
+        const user = await env.DB_SSO.prepare("SELECT id, full_name, email, role FROM users WHERE id = ?").bind(auth.uid).first();
         if (!user) return jsonUnauthorized("User tidak ditemukan di database.");
 
         // 3. Kembalikan data user agar frontend mengizinkan masuk ke Dashboard
