@@ -5,6 +5,9 @@ export async function onRequestPost(context) {
     const { request, env } = context;
     const auth = await requireAuth(env, request);
     if (!auth.ok) return auth.res;
+    
+    // SMART BINDING: Mencari binding DB_CLIENT jika ada, jika tidak pakai DB bawaan
+    const db = env.DB_CLIENT || env.DB_DASHBOARD || env.DB;
 
     const body = await request.json().catch(() => ({}));
     const now = Math.floor(Date.now() / 1000);
@@ -14,17 +17,15 @@ export async function onRequestPost(context) {
 
         const projId = `proj_${crypto.randomUUID()}`;
         
-        // 1. Simpan ke tabel projects
-        await env.DB.prepare("INSERT INTO projects (id, owner_user_id, title, status, created_at) VALUES (?, ?, ?, 'published', ?)")
+        // Simpan Data Proyek Utama
+        await db.prepare("INSERT INTO projects (id, owner_user_id, title, status, created_at) VALUES (?, ?, ?, 'published', ?)")
             .bind(projId, auth.uid, body.title, now).run();
 
-        // 2. Simpan multi-role ke tabel project_roles
+        // Simpan Custom Roles (Menggunakan kolom script_link untuk menyimpan spesifikasi dinamis)
         if (body.roles && Array.isArray(body.roles)) {
             for (const r of body.roles) {
                 const roleId = `role_${crypto.randomUUID()}`;
                 const title = r.role_name || 'Karakter Belum Dinamai';
-                
-                // Trik: Simpan detail custom (gender, usia, deskripsi) sebagai JSON di kolom script_link
                 const customSpecs = JSON.stringify({
                     gender: r.gender, category: r.category, location: r.location,
                     age_min: r.age_min, age_max: r.age_max,
@@ -32,13 +33,13 @@ export async function onRequestPost(context) {
                     description: r.description
                 });
 
-                await env.DB.prepare("INSERT INTO project_roles (id, project_id, title, created_at, script_link) VALUES (?, ?, ?, ?, ?)")
+                await db.prepare("INSERT INTO project_roles (id, project_id, title, created_at, script_link) VALUES (?, ?, ?, ?, ?)")
                     .bind(roleId, projId, title, now, customSpecs).run();
             }
         }
-
-        return jsonOk({ message: "Proyek dan Peran berhasil diterbitkan!", project_id: projId });
+        return jsonOk({ message: "Proyek berhasil diterbitkan!", project_id: projId });
     } catch (e) {
-        return jsonError("Terjadi kesalahan sistem saat menyimpan proyek.", 500);
+        // EXPOSE ERROR SQL: Memunculkan pesan error D1 yang sebenarnya ke Layar Frontend
+        return jsonError(`DB Error: ${e.message}`, 500); 
     }
 }
