@@ -4,31 +4,39 @@ import { parseCookies } from "../../_lib/cookies.js";
 export async function onRequestPost({ request, env }) {
     try {
         const cookies = parseCookies(request);
-        if (!cookies.sid) return jsonError("Unauthorized", 401);
-
         const now = Math.floor(Date.now() / 1000);
         const session = await env.DB.prepare("SELECT user_id FROM sessions WHERE id = ? AND expires_at > ?").bind(cookies.sid, now).first();
-        if (!session) return jsonError("Session expired", 401);
+        if (!session) return jsonError("Unauthorized", 401);
 
         const body = await request.json().catch(() => ({}));
-        if (!body.project_id) return jsonError("ID Proyek tidak valid.", 400);
+        const projectId = body.project_id;
+        // Body sekarang menerima array of objects: [{role_id: '..', video_link: '..'}, ..]
+        const applicationData = body.applications || [];
 
-        // 1. Validasi: Apakah proyek masih buka?
-        const project = await env.DB.prepare("SELECT status FROM projects WHERE id = ?").bind(body.project_id).first();
-        if (!project) return jsonError("Proyek tidak ditemukan.", 404);
-        if (project.status !== 'open') return jsonError("Maaf, pendaftaran proyek ini sudah ditutup.", 403);
+        if (!projectId || applicationData.length === 0) return jsonError("Pilih minimal 1 peran dan sertakan video audisi!", 400);
 
-        // 2. Validasi: Apakah Talent sudah melamar sebelumnya? (Mencegah Spam)
-        const existing = await env.DB.prepare("SELECT id FROM project_applications WHERE project_id = ? AND talent_user_id = ?").bind(body.project_id, session.user_id).first();
-        if (existing) return jsonError("Anda sudah melamar proyek ini sebelumnya.", 409);
+        const stmts = [];
+        for (const app of applicationData) {
+            if (!app.role_id || !app.video_link) continue; // Skip jika data tidak lengkap per role
 
-        // 3. Proses Lamaran
-        const appId = crypto.randomUUID();
-        await env.DB.prepare("INSERT INTO project_applications (id, project_id, talent_user_id, status, applied_at) VALUES (?, ?, ?, 'pending', ?)")
-            .bind(appId, body.project_id, session.user_id, now).run();
+            // Validasi link video dasar (harus mengandung http/https)
+            if (!app.video_link.startsWith('http')) continue;
 
-        return jsonOk({ message: "Berhasil melamar proyek! Silakan tunggu persetujuan dari Client." });
-    } catch (e) {
-        return jsonError("Server Error (project_apply)", 500);
-    }
+            // Cek apakah sudah pernah melamar di peran ini
+            const exist = await env.DB.prepare("SELECT id FROM project_applications WHERE project_id = ? AND role_id = ? AND talent_user_id = ?").bind(projectId, app.role_id, session.user_id).first();
+            
+            if (!exist) {
+                const appId = crypto.randomUUID();
+                stmts.push(env.DB.prepare(`
+                    INSERT INTO project_applications (id, project_id, role_id, talent_user_id, video_link, status, applied_at)
+                    VALUES (?, ?, ?, ?, ?, 'applied', ?)
+                `).bind(appId, projectId, app.role_id, session.user_id, app.video_link, now));
+            }
+        }
+        
+        if (stmts.length > 0) await env.DB.batch(stmts);
+        else return jsonError("Anda sudah melamar peran yang valid sebelumnya atau data video kosong.", 409);
+
+        return jsonOk({ message: "Lamaran & Video Audisi berhasil dikirim!" });
+    } catch (e) { return jsonError("Server Error", 500); }
 }
