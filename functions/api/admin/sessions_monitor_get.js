@@ -1,12 +1,16 @@
 import { jsonOk, jsonError } from "../../_lib/response.js";
-import { requireAuth } from "../../_lib/session.js";
-import { getSessionsMonitorService } from "../../services/admin/admin_security_service.js";
 
-export async function onRequestGet({ request, env }){
-  const a = await requireAuth(env, request);
-  if(!a.ok) return a.res;
-  const url = new URL(request.url);
-  const result = await getSessionsMonitorService(env, a, { limit: url.searchParams.get("limit") || "100" });
-  if(result?.error) return jsonError(result.error, result.status || 500);
-  return jsonOk(result);
+export async function onRequestGet(context) {
+    const { env, request } = context;
+    const userId = "USER_ID_FROM_SESSION"; 
+
+    try {
+        const sessions = await env.DB.prepare(
+            "SELECT * FROM user_sessions WHERE user_id = ? AND is_revoked = 0 ORDER BY last_active DESC"
+        ).bind(userId).all();
+        
+        return jsonOk({ sessions: sessions.results });
+    } catch (e) {
+        return jsonError(e.message);
+    }
 }

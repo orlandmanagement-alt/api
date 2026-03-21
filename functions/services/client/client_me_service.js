@@ -1,7 +1,10 @@
-import { getClientMeRow } from "../../repos/client_repo.js";
-export async function getClientMeService(env, auth) {
-  if(!auth.roles.includes('client') && !auth.roles.includes('super_admin')) return { error: "forbidden", status: 403 };
-  const row = await getClientMeRow(env, auth.uid);
-  if(!row) return { error: "not_found", status: 404 };
-  return { user: row };
-}
+import { ClientRepo } from "../../repos/client_repo.js";
+
+export const ClientMeService = {
+    async getMyProfile(dbClient, userId) {
+        return await ClientRepo.getProfile(dbClient, userId);
+    },
+    async updateMyProfile(dbClient, userId, data) {
+        return await ClientRepo.upsertProfile(dbClient, userId, data);
+    }
+};
